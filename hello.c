@@ -11,20 +11,11 @@
 #include <net/sock.h>
 #include <net/icmp.h>
 #include <linux/errno.h>
-
-#include <linux/kernel.h>
-#include <linux/module.h>
-#include <linux/init.h>
-#include <linux/kthread.h>
-
 #include <linux/errno.h>
 #include <linux/types.h>
-
-#include <linux/netdevice.h>
-#include <linux/ip.h>
 #include <linux/in.h>
-
 #include <linux/delay.h>
+
 
 #define DEFAULT_PORT 2325
 #define CONNECT_PORT 16767
@@ -299,14 +290,6 @@ printk(KERN_INFO MODULE_NAME": Could not %u %u \n",&sock_send, sock_send);
 }
         
 
-
-
-
-
-
-
-
-
 int ksocket_send(struct socket *sock, struct sockaddr_in *addr, unsigned char *buf, int len)
 {
         struct msghdr msg;
@@ -338,7 +321,9 @@ int ksocket_send(struct socket *sock, struct sockaddr_in *addr, unsigned char *b
 }
 
 
-
+int send_skb_send(void) {
+	return 1;
+}
 
 
 int init_module(void)
@@ -349,6 +334,10 @@ int init_module(void)
 
         printk(KERN_INFO " calling udp\n");
 		send_udp_packet();
+
+        printk(KERN_INFO " calling skb send\n");
+		send_skb_packet();
+
         return 0;
 }
 
