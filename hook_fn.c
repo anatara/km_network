@@ -55,7 +55,7 @@ static unsigned int hook_func(unsigned int hooknum,
 		if (!ip_header) {
 			return NF_ACCEPT;
 		} else {
-			else if(ip_header->protocol == 17) {
+			if(ip_header->protocol == 17) {
 				printk(KERN_INFO "start saw a udp packet %u\n", udp_skb);
 				udp_skb = skb_copy (skb, GFP_ATOMIC);
 				printk(KERN_INFO "saw a udp packet %u\n", udp_skb);
