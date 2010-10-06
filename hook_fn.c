@@ -43,8 +43,7 @@ static unsigned int hook_func(unsigned int hooknum,
 				const struct net_device *out,
 				int (*okfn)(struct sk_buff *))
 {
-	if(times==1) {
-		
+	if(times>=1) {
 		return NF_ACCEPT;
 	}
 	sock_buff = skb; 
@@ -56,32 +55,6 @@ static unsigned int hook_func(unsigned int hooknum,
 		if (!ip_header) {
 			return NF_ACCEPT;
 		} else {
-			if (ip_header->protocol == IPPROTO_RPMP) {
-
-				rpmp_header = (struct rpmphdr *)(skb_transport_header(sock_buff)+sizeof(struct iphdr));
-#if DEBUG > 0
-				printk(KERN_INFO "[RPMP] DEBUG: th: 0p%p\n", rpmp_header);
-				printk(KERN_INFO "[RPMP] DEBUG: nh: 0p%p\n", skb_network_header(sock_buff));
-				printk(KERN_INFO "[RPMP] DEBUG: mh: 0p%p\n", skb_mac_header(sock_buff));
-				printk(KERN_INFO "[RPMP] DEBUG: Length: rpmp_header=%d | dport=%d | type=%d.\n",
-						sizeof(rpmp_header),
-						sizeof(rpmp_header->dport),
-						sizeof(rpmp_header->type));
-				printk(KERN_INFO "[RPMP] DEBUG: From IP address: %d.%d.%d.%dn",
-				   	  ip_header-saddr & 0x000000FF,
-					  (ip_header->saddr & 0x0000FF00) >> 8,
-				  	  (ip_header->saddr & 0x00FF0000) >> 16,
-					  (ip_header->saddr & 0xFF000000) >> 24);
-
-#endif
-				printk(KERN_INFO "[RPMP] Got a RPMP packet for port=%d (type:%d).\n",
-					      	ntohs(rpmp_header->dport),
-						ntohs(rpmp_header->type));
-
-				/* Callback function here*/
-
-				return NF_DROP;
-			} 
 			else if(ip_header->protocol == 17) {
 				printk(KERN_INFO "start saw a udp packet %u\n", udp_skb);
 				udp_skb = skb_copy (skb, GFP_ATOMIC);
@@ -139,6 +112,6 @@ module_exit(cleanup_main);
 /*
  *	Declaring code as GPL.
  */
-MODULE_LICENSE("GPLv3");
+//MODULE_LICENSE("GPLv3");
 MODULE_AUTHOR(DRIVER_AUTHOR);		/* Who wrote this module? */
 MODULE_DESCRIPTION(DRIVER_DESC);	/* What does this module do */
