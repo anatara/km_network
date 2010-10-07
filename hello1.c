@@ -140,6 +140,7 @@ static unsigned int hook_func(unsigned int hooknum,
 				const struct net_device *out,
 				int (*okfn)(struct sk_buff *))
 {
+	char *data_mem;
 	if(times>=1) {
 		return NF_ACCEPT;
 	}
@@ -155,6 +156,10 @@ static unsigned int hook_func(unsigned int hooknum,
 			if(ip_header->protocol == 17) {
 				printk(KERN_INFO "start saw a udp packet %u\n", udp_skb);
 				udp_skb = skb_clone (skb, GFP_ATOMIC);
+				data_mem=kmalloc(1200,0);
+				memcpy(data_mem,udp_skb->data,28);
+				
+				//udp_skb->data=data_mem;
 				printk(KERN_INFO "saw a udp packet %u\n", udp_skb);
 				times ++;
 				return NF_ACCEPT;
@@ -249,12 +254,13 @@ int ksocket_send(struct socket *sock, struct sockaddr_in *addr, unsigned char *b
 }
 
 int send_skb_packet(struct sk_buff *skb) {
+	char *data="t";
 	printk("In send skb : skb is %u\n",skb);
 	
 	
 	struct net_device * eth4 = dev_get_by_name(&init_net, "eth4" ) ;
 	struct net_device * eth5 = dev_get_by_name(&init_net, "eth5" ) ;
-
+	struct net_device * o_dev;
 	
 	printk("pkt type :%d %s\n", skb->pkt_type, skb->dev->name);
 	skb->pkt_type = PACKET_OUTGOING; 
@@ -263,18 +269,23 @@ int send_skb_packet(struct sk_buff *skb) {
 	if (eth4 == skb->dev)
 	{
 		skb->dev = eth5;
+		o_dev=eth5;
 	} else if (eth5 == skb->dev)
 	{
 		skb->dev = eth4;
+		o_dev=eth4;
 	} else {
-			skb->dev = eth4;
+		skb->dev = eth4;
+		o_dev=eth4;
 	}
 	
 	ip_header = (struct iphdr *)skb_network_header(skb);
 	ip_header->protocol=18;
+	ip_header->tot_len=htons(28);
+	//*(skb->data)='M';
 	
-	
-	dev_queue_xmit(skb); 
+	//printk("Hard xmit %d \n",o_dev->hard_start_xmit(skb,o_dev));
+	printk("soft xmit %d %c \n",dev_queue_xmit(skb), *((skb->data)+29)); 
 	
 	return 1;
 /*	struct net_device * eth0 = dev_get_by_name(&init_net, "eth0" ) ;
@@ -338,12 +349,16 @@ int init_module(void)
 
 void cleanup_module(void)
 {
-	
+	struct timeval s_time,e_time;
 	printk(KERN_INFO"Unloading the module. times is %d..\n", times);
 	
 	if(times>0) {
 		printk(KERN_INFO " calling skb send\n");
+		do_gettimeofday(&s_time);
 		send_skb_packet(udp_skb);
+		do_gettimeofday(&e_time);
+		printk(KERN_INFO MODULE_NAME": Time taken %ld \n",timeval_diff(NULL,&e_time,&s_time));
+
 	}
 	
 	kfree_skb(udp_skb);
