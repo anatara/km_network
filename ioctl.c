@@ -85,7 +85,7 @@ ioctl_get_nth_byte(int file_desc)
 main()
 {
 	int file_desc, ret_val;
-	char *msg = "hello kernel ha ha ha\n";
+	char *msg = "hello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copiedhello kernel ha ha ha copied\n";
 	char *data_ptr;
 
 	file_desc = open(DEVICE_FILE_NAME, 0);
@@ -95,13 +95,22 @@ main()
 	}
 	
 	data_ptr=(char *)malloc(25);
-	sprintf(data_ptr,"%010u %010u\n",msg,17);
+	sprintf(data_ptr,"%010u %010u\n",msg,400);
 
 	printf("asef\n",msg);
 	printf("%10u\n",msg);
 //	ioctl_get_nth_byte(file_desc);
 	
 	ioctl_set_msg(file_desc, data_ptr);
+	
+	sleep(1);
+	
+	
+	char *msg1 = "2nd append he he he he\n";
+	sprintf(data_ptr,"%010u\n",msg1);
+	ioctl_set_msg(file_desc, data_ptr);
+	
+	
 	ioctl_get_msg(file_desc);
 	close(file_desc);
 }
