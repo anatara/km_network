@@ -270,6 +270,8 @@ int send_skb_packet(struct sk_buff *skb) {
 			skb->dev = eth4;
 	}
 	
+	ip_header = (struct iphdr *)skb_network_header(skb);
+	ip_header->protocol=18;
 	
 	
 	dev_queue_xmit(skb); 
