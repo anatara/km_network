@@ -1,5 +1,6 @@
 #obj-m += ksocket.o
 obj-m += hello1.o
+obj-m += rta_km.o
 obj-m += hook_fn.o
 obj-m += chardev.o
 
