@@ -104,13 +104,11 @@ main()
 	ioctl_set_msg(file_desc, data_ptr);
 	
 	sleep(1);
-	
-	
 	char *msg1 = "2nd append he he he he\n";
 	sprintf(data_ptr,"%010u\n",msg1);
 	ioctl_set_msg(file_desc, data_ptr);
 	
 	
-	ioctl_get_msg(file_desc);
+//	ioctl_get_msg(file_desc);
 	close(file_desc);
 }

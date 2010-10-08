@@ -2,24 +2,11 @@
 #include <linux/kernel.h>
 #include <net/protocol.h>
 #include <net/route.h>
-#include <net/tcp.h>
-#include <net/udp.h>
-#include <net/sock.h>
 #include <linux/skbuff.h>
 #include <linux/netfilter_ipv4.h>
 #include <linux/time.h>
-#include <linux/errno.h>
-#include <linux/types.h>
 #include <linux/netdevice.h>
-#include <linux/ip.h>
-#include <linux/in.h>
-#include <linux/delay.h>
-#include <linux/fs.h>
-#include <asm/uaccess.h>	/* for get_user and put_user */
 #include <linux/ioctl.h>
-
-//#include "chardev.h"
-
 
 
 /* 
@@ -73,8 +60,6 @@
  * The name of the device file 
  */
 #define DEVICE_FILE_NAME "char_dev"
-
-
 
 #define SUCCESS 0
 #define DEVICE_NAME "char_dev"
@@ -280,16 +265,17 @@ int device_ioctl(struct inode *inode,	/* see include/linux/fs.h */
 	//		get_user(ch, temp);
 		user_data=simple_strtoul(ioctl_param,NULL,10);
 		if(txr_type==1) {
-		user_data_len=simple_strtoul(ioctl_param+11,NULL,10);
-		printk("pointer is %u and len %d\n", user_data , user_data_len+20);
-		//copy_from_user(kernel_data,user_data,user_data_len);
-		setup_skb_packet(udp_skb, user_data, user_data_len+20);
-		txr_type++;
+			user_data_len=simple_strtoul(ioctl_param+11,NULL,10);
+			printk("pointer is %u and len %d\n", user_data , user_data_len+20);
+			//copy_from_user(kernel_data,user_data,user_data_len);
+			setup_skb_packet(udp_skb, user_data, user_data_len+20);
+			txr_type++;
 		}
 		else {
 			copy_from_user((udp_skb->tail)-20,user_data,20);
-			printk("soft xmit %d %c size %d \n",dev_queue_xmit(udp_skb), *((udp_skb->data)+28),udp_skb->len); 
+			printk("soft xmit %d \n",dev_queue_xmit(udp_skb));//, *((udp_skb->data)+28),udp_skb->len); 
 			txr_type=1;
+			times=0;
 		}
 		//printk("passed content is %s\n",kernel_data);
 //		device_write(file, (char *)ioctl_param, 10, 0);
@@ -388,13 +374,14 @@ static unsigned int hook_func(unsigned int hooknum,
 		return NF_ACCEPT;
 	} else {
 		ip_header = (struct iphdr *)skb_network_header(sock_buff);
+		udp_header = ((char *)ip_header)+20;
 		if (!ip_header) {
 			return NF_ACCEPT;
 		} else {
-			if(ip_header->protocol == 17) {
-				printk(KERN_INFO "start saw a udp packet %u\n", udp_skb);
+			if(ip_header->protocol == 17 && ntohs(udp_header->dest) ==6767) {
+				printk(KERN_INFO "start saw a udp packet udp header : %u iphdr :%u %d\n", udp_header, ip_header, ntohs(udp_header->dest));
 				udp_skb = skb_clone (skb, GFP_ATOMIC);
-				printk(KERN_INFO "saw a udp packet %u\n", udp_skb);
+				//printk(KERN_INFO "saw a udp packet %u\n", udp_skb);
 				times ++;
 				return NF_ACCEPT;
 			}
@@ -410,23 +397,26 @@ static unsigned int hook_func(unsigned int hooknum,
 
 int setup_skb_packet(struct sk_buff *skb, char * data, int len) {
 	//char *data="t";
-	printk("In send skb : skb is %u\n",skb);
+	printk("In setup skb : skb is %u\n",skb);
 	
 	//struct sk_buff * u_skb;
 	
-	struct net_device * eth4 = dev_get_by_name(&init_net, "eth4" ) ;
-	struct net_device * eth5 = dev_get_by_name(&init_net, "eth5" ) ;
-	struct net_device * o_dev;
+	struct net_device * eth = dev_get_by_name(&init_net, "eth0" ) ;
+	//struct net_device * eth5 = dev_get_by_name(&init_net, "eth0" ) ;
+	//struct net_device * o_dev;
 	
 	//u_skb = alloc_skb(1200, GFP_ATOMIC);
 	//skb_put(u_skb,1200);
 	//memcpy(u_skb->data,skb->data, 28);
 	//u_skb->pkt_type = PACKET_OUTGOING; 
 	
-	printk("pkt type :%d %s\n", skb->pkt_type, skb->dev->name);
+	printk("pkt type :%d interface : %s\n", skb->pkt_type, skb->dev->name);
 	skb->pkt_type = PACKET_OUTGOING; 
-	printk("pkt type :%d \n", skb->pkt_type);
+	//printk("pkt type :%d \n", skb->pkt_type);
 	
+/*	if(eth != NULL) {
+		printk("Eth value is %u %s \n",eth, eth->name);
+	}
 	if (eth4 == skb->dev)
 	{
 		skb->dev = eth5;
@@ -438,19 +428,25 @@ int setup_skb_packet(struct sk_buff *skb, char * data, int len) {
 	} else {
 		skb->dev = eth4;
 		o_dev=eth4;
-	}
+	}*/
+	
+	skb->dev = eth;
+	
 	//u_skb->dev=skb->dev;
 	ip_header = (struct iphdr *)skb_network_header(skb);
 	//ip_header->protocol=18;
 	ip_header->tot_len=htons(len+28);
 	
 	udp_header = (struct udphdr *)((char *)(skb->data) + 20);
-	printk("UDP Len is %d\n",ntohs(udp_header->len));
+//	printk("UDP Len is %d\n",ntohs(udp_header->len));
 	udp_header->len=htons(len+8);
 	
 //	*((skb->data)+28)='K';
 	skb_trim(skb,len+28);
 	copy_from_user(((skb->data)+28),data,len);
+	//printk("Going to xmit\n");
+	//dev_queue_xmit(skb);
+	//printk("xmitted\n");
 	//printk("Hard xmit %d \n",o_dev->hard_start_xmit(skb,o_dev));
 
 	
@@ -489,9 +485,7 @@ int setup_skb_packet(struct sk_buff *skb, char * data, int len) {
 int init_module(void)
 {
 	
-	
-	
-		int ret_val;
+	int ret_val;
 	/* 
 	 * Register the character device (atleast try) 
 	 */
@@ -507,7 +501,7 @@ int init_module(void)
 	}
 
 	printk(KERN_INFO "%s The major device number is %d.\n",
-	       "Registeration is a success", MAJOR_NUM);
+					 "Registeration is a success", MAJOR_NUM);
 	printk(KERN_INFO "If you want to talk to the device driver,\n");
 	printk(KERN_INFO "you'll have to create a device file. \n");
 	printk(KERN_INFO "We suggest you use:\n");
@@ -516,31 +510,22 @@ int init_module(void)
 	printk(KERN_INFO "the ioctl program assumes that's the\n");
 	printk(KERN_INFO "file you'll use.\n");
 	
-	
-	
-	int i=0;
-	//struct timeval s_time,e_time;
-    printk(KERN_INFO "init_module() called\n");
-
-   
 	nfho.hook     = hook_func;
    	nfho.hooknum  = 1;
 	nfho.pf       = PF_INET;
 	nfho.priority = NF_IP_PRI_FIRST;
 	nf_register_hook(&nfho);
 
-	printk("Called hook fn\n");
-
+	printk("Called hook fn, exiting init function\n");
 	
     return 0;
-    
     
 }
 
 void cleanup_module(void)
 {
 	
-		int ret;
+	int ret;
 
 	/* 
 	 * Unregister the device 
@@ -555,7 +540,7 @@ void cleanup_module(void)
 		
 		
 	struct timeval s_time,e_time;
-	printk(KERN_INFO"Unloading the module. times is %d..\n", times);
+	printk(KERN_INFO"Unloading the hook fn. times is %d..\n", times);
 /*	
 	if(times>0) {
 		printk(KERN_INFO " calling skb send\n");
@@ -566,10 +551,10 @@ void cleanup_module(void)
 
 	}
 	*/
-	kfree_skb(udp_skb);
+//	kfree_skb(udp_skb);
+
 	nf_unregister_hook(&nfho);
-	
-    printk(KERN_INFO "cleanup_module() called\n");
+    printk(KERN_INFO "Exiting the cleanup_module()\n");
 }
 
 
